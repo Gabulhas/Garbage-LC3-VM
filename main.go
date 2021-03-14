@@ -2,6 +2,7 @@ package main
 
 import (
 	regs "golang_vm/Registers"
+	"log"
 	"math"
 	"os"
 )
@@ -17,6 +18,13 @@ func main() {
 		exit(2)
 	    }
 
+	for j := 1; i < len(os.Args); j++ {
+
+	    if (!read_image(os.Args[j])) {
+		log.Fatalf("failed to load image: %s\n", os.Args[j])
+	    }
+	}
+
 
 
 	const (
@@ -27,7 +35,7 @@ func main() {
 	running := 1
 
 	for running == 1 {
-		instr := mem_read(regs.REG[R_PC]++)
+		instr := mem_read(regs.REG[R_PC]+ 1)
 		op := instr >> 12
 
 		switch op {
@@ -82,5 +90,10 @@ func main() {
 		}
 
 	}
+
+}
+
+
+func read_image(filename string) bool{
 
 }
