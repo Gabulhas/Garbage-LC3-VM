@@ -1,9 +1,8 @@
 package Opcodes
 
-type Opcode int
 
 const (
-	BR   Opcode = iota /* branch */
+	BR   = iota /* branch */
 	ADD                /* add  */
 	LD                 /* load */
 	ST                 /* store */

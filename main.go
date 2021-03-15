@@ -56,7 +56,7 @@ func main() {
 				regs.REG[r0] = regs.REG[r1] + imm5
 
 			} else {
-				var r2 uint16 = instr & 0x7
+				r2 := instr & 0x7
 				regs.REG[r0] = regs.REG[r1] + regs.REG[r2]
 			}
 
@@ -144,13 +144,13 @@ func main() {
 		case OPS.STI:
 			sr := (instr >> 9) & 0x7
 			PCoffset9 := signExtend(instr&0x3F, 6)
-			mem_write(mem_read(regs.REG[regs.R_PC] + PCoffset9), regs.REG[sr])
+			mem_write(mem_read(regs.REG[regs.R_PC]+PCoffset9), regs.REG[sr])
 			break
 		case OPS.STR:
 			sr := (instr >> 9) & 0x7
 			r1 := (instr >> 6) & 0x7
 			PCoffset6 := signExtend(instr&0x3F, 6)
-			mem_write(regs.REG[r1] + PCoffset6, regs.REG[sr])
+			mem_write(regs.REG[r1]+PCoffset6, regs.REG[sr])
 
 			break
 		case OPS.TRAP:
@@ -161,7 +161,7 @@ func main() {
 		case OPS.RTI:
 			break
 		default:
-			log.Fatal("BAD OPCODE:" + op)
+			log.Fatalf("\nBAD OPCODE:%d", op)
 			break
 
 		}
@@ -193,5 +193,13 @@ func updateFlags(r uint16) {
 }
 
 func read_image(filename string) bool {
+
+}
+
+func mem_write(address, val uint16) {
+	memory[address] = val
+}
+
+func mem_read(address uint16) uint16 {
 
 }
