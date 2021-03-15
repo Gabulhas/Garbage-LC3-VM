@@ -16,4 +16,4 @@ const (
 	R_COUNT
 )
 
-var REG [R_COUNT]int16
+var REG [R_COUNT]uint16
