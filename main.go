@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
-	"github.com/nsf/termbox-go"
 	fls "golang_vm/ConditionFlags"
 	mr "golang_vm/MemoryMappedRegisters"
 	OPS "golang_vm/Opcodes"
@@ -14,10 +13,14 @@ import (
 	"log"
 	"math"
 	"os"
+
+	"github.com/nsf/termbox-go"
 )
 
 var memory [math.MaxUint16]uint16
 var inputReader *bufio.Reader
+var keyBuffer []rune
+var logs []string
 
 //TODO: falta operando RET
 func main() {
@@ -32,6 +35,10 @@ func main() {
 	}
 	termbox.Init()
 
+	keyBuffer = []rune{}
+
+	listenKeyPresses()
+
 	const PC_START = 0x3000
 	regs.REG[regs.PC] = PC_START
 
@@ -43,6 +50,8 @@ func main() {
 		regs.REG[regs.PC]++
 		op := instr >> 12
 		//fmt.Printf("OP:%s\n", OPS.OperandToString(int(op)))
+
+		logs = append(logs, OPS.OperandToString(int(op)))
 		switch op {
 
 		case OPS.ADD:
@@ -89,7 +98,7 @@ func main() {
 
 			PCoffset9 := signExtend(instr&0x1FF, 9)
 			condFlag := (instr >> 9) & 0x7
-			if condFlag&regs.REG[regs.COND] == 1 {
+			if (condFlag & regs.REG[regs.COND]) == 1 {
 				fmt.Println("yep")
 				regs.REG[regs.PC] = regs.REG[regs.PC] + PCoffset9
 			}
@@ -204,8 +213,12 @@ func main() {
 				break
 			case trp.HALT:
 				fmt.Printf("HALT")
-				inputReader.ReadString('\n')
+				getChar()
+				termbox.Flush()
+				termbox.Close()
 				running = false
+				fmt.Println(logs)
+				os.Exit(0)
 				break
 			}
 
@@ -272,7 +285,7 @@ func memRead(address uint16) uint16 {
 	if address == mr.KBSR {
 		if checkKey() {
 			memory[mr.KBSR] = 0x1 << 15
-			memory[mr.KBDR] = getChar()
+			memory[mr.KBDR] = uint16(keyBuffer[len(keyBuffer)-1])
 		}
 	} else {
 		memory[mr.KBSR] = 0
@@ -289,6 +302,21 @@ func getChar() uint16 {
 	}
 }
 
+func listenKeyPresses() {
+	go func() {
+		for {
+			if event := termbox.PollEvent(); event.Type == termbox.EventKey {
+				keyBuffer = append(keyBuffer, event.Ch)
+				fmt.Println(event.Ch)
+				if event.Key == termbox.KeyCtrlC {
+					os.Exit(0)
+				}
+			}
+		}
+	}()
+
+}
+
 func DebugRegister() {
 	for i, val := range regs.REG {
 		fmt.Printf("R%d - %d\n", i, val)
@@ -297,6 +325,9 @@ func DebugRegister() {
 }
 
 func checkKey() bool {
+	if len(keyBuffer) > 0 {
+		return true
+	}
 
-	return true
+	return false
 }
