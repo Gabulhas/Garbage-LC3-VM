@@ -19,3 +19,6 @@ const (
 	LEA                /* load effective address */
 	TRAP               /* execute trap */
 )
+func OperandToString(i int) string {
+	return []string{"BR", "ADD", "LD", "ST", "JSR", "AND", "LDR", "STR", "RTI", "NOT", "LDI", "STI", "JMP", "RES", "LEA", "TRAP",}[i]
+}

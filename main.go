@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"github.com/nsf/termbox-go"
 	fls "golang_vm/ConditionFlags"
 	mr "golang_vm/MemoryMappedRegisters"
 	OPS "golang_vm/Opcodes"
@@ -29,6 +30,7 @@ func main() {
 	for j := 1; j < len(os.Args); j++ {
 		readImage(os.Args[j])
 	}
+	termbox.Init()
 
 	const PC_START = 0x3000
 	regs.REG[regs.PC] = PC_START
@@ -40,14 +42,8 @@ func main() {
 		instr := memRead(regs.REG[regs.PC])
 		regs.REG[regs.PC]++
 		op := instr >> 12
-
+		//fmt.Printf("OP:%s\n", OPS.OperandToString(int(op)))
 		switch op {
-		//ADD - takes two values and stores them in one register
-		//if imm_flag (immediate mode) it takes sums with the value
-		//else it takes a register as an argument and adds it
-
-		//Like, imm mode: ADD R2 R0 14
-		//Like, normal mode: ADD R2 R0 R1
 
 		case OPS.ADD:
 
@@ -77,7 +73,7 @@ func main() {
 				regs.REG[r0] = regs.REG[r1] & imm5
 
 			} else {
-				var r2 uint16 = instr & 0x7
+				r2 := instr & 0x7
 				regs.REG[r0] = regs.REG[r1] & regs.REG[r2]
 			}
 
@@ -90,12 +86,11 @@ func main() {
 			regs.REG[r0] = ^regs.REG[r1]
 			break
 		case OPS.BR:
-			n := (instr >> 9) & 0x1
-			z := (instr >> 10) & 0x1
-			p := (instr >> 11) & 0x1
-			PCoffset9 := signExtend(instr&0x1FF, 9)
 
-			if (n&fls.FL_NEG) == 1 || (z&fls.FL_ZRO) == 1 || (p&fls.FL_POS) == 1 {
+			PCoffset9 := signExtend(instr&0x1FF, 9)
+			condFlag := (instr >> 9) & 0x7
+			if condFlag&regs.REG[regs.COND] == 1 {
+				fmt.Println("yep")
 				regs.REG[regs.PC] = regs.REG[regs.PC] + PCoffset9
 			}
 			break
@@ -161,11 +156,7 @@ func main() {
 			trap := instr & 0xFF
 			switch trap {
 			case trp.GETC:
-				charByte, err := inputReader.ReadByte()
-				if err != nil {
-					log.Fatal(err)
-				}
-				regs.REG[regs.R0] = uint16(charByte)
+				regs.REG[regs.R0] = getChar()
 				break
 			case trp.OUT:
 				fmt.Printf("%c", regs.REG[regs.R0])
@@ -186,11 +177,7 @@ func main() {
 				break
 			case trp.IN:
 				fmt.Printf("Enter a character: ")
-				charByte, err := inputReader.ReadByte()
-				if err != nil {
-					log.Fatal(err)
-				}
-				regs.REG[regs.R0] = uint16(charByte)
+				regs.REG[regs.R0] = getChar()
 				break
 			case trp.PUTSP:
 
@@ -285,11 +272,7 @@ func memRead(address uint16) uint16 {
 	if address == mr.KBSR {
 		if checkKey() {
 			memory[mr.KBSR] = 0x1 << 15
-			charByte, err := inputReader.ReadByte()
-			if err != nil {
-				log.Fatal(err)
-			}
-			memory[mr.KBDR] = uint16(charByte)
+			memory[mr.KBDR] = getChar()
 		}
 	} else {
 		memory[mr.KBSR] = 0
@@ -297,7 +280,23 @@ func memRead(address uint16) uint16 {
 	return memory[address]
 }
 
+func getChar() uint16 {
+	for {
+		event := termbox.PollEvent()
+		if event.Type == termbox.EventKey {
+			return uint16(event.Ch)
+		}
+	}
+}
+
+func DebugRegister() {
+	for i, val := range regs.REG {
+		fmt.Printf("R%d - %d\n", i, val)
+	}
+	fmt.Println("---------")
+}
+
 func checkKey() bool {
-	//TODO: implement
+
 	return true
 }
