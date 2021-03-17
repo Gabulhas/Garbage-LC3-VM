@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"github.com/nsf/termbox-go"
 	fls "golang_vm/ConditionFlags"
 	mr "golang_vm/MemoryMappedRegisters"
 	OPS "golang_vm/Opcodes"
@@ -13,8 +14,7 @@ import (
 	"log"
 	"math"
 	"os"
-
-	"github.com/nsf/termbox-go"
+	"time"
 )
 
 var memory [math.MaxUint16]uint16
@@ -33,7 +33,11 @@ func main() {
 	for j := 1; j < len(os.Args); j++ {
 		readImage(os.Args[j])
 	}
-	termbox.Init()
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
 
 	keyBuffer = []rune{}
 
@@ -98,8 +102,9 @@ func main() {
 
 			PCoffset9 := signExtend(instr&0x1FF, 9)
 			condFlag := (instr >> 9) & 0x7
+			logs = append(logs, fmt.Sprintf(":%d %d", PCoffset9, condFlag))
+
 			if (condFlag & regs.REG[regs.COND]) == 1 {
-				fmt.Println("yep")
 				regs.REG[regs.PC] = regs.REG[regs.PC] + PCoffset9
 			}
 			break
@@ -163,6 +168,7 @@ func main() {
 			break
 		case OPS.TRAP:
 			trap := instr & 0xFF
+			logs = append(logs, fmt.Sprintf(":%d", trap))
 			switch trap {
 			case trp.GETC:
 				regs.REG[regs.R0] = getChar()
@@ -284,7 +290,7 @@ func memWrite(address, val uint16) {
 func memRead(address uint16) uint16 {
 	if address == mr.KBSR {
 		if checkKey() {
-			memory[mr.KBSR] = 0x1 << 15
+			memory[mr.KBSR] = 1 << 15
 			memory[mr.KBDR] = uint16(keyBuffer[len(keyBuffer)-1])
 		}
 	} else {
@@ -294,12 +300,13 @@ func memRead(address uint16) uint16 {
 }
 
 func getChar() uint16 {
-	for {
-		event := termbox.PollEvent()
-		if event.Type == termbox.EventKey {
-			return uint16(event.Ch)
-		}
+	for len(keyBuffer) == 0 {
+		time.Sleep(time.Microsecond)
 	}
+	keyPress := keyBuffer[0]
+	fmt.Printf("KEY PRESSED: %c", keyPress)
+	keyBuffer = keyBuffer[1:]
+	return uint16(keyPress)
 }
 
 func listenKeyPresses() {
@@ -307,7 +314,6 @@ func listenKeyPresses() {
 		for {
 			if event := termbox.PollEvent(); event.Type == termbox.EventKey {
 				keyBuffer = append(keyBuffer, event.Ch)
-				fmt.Println(event.Ch)
 				if event.Key == termbox.KeyCtrlC {
 					os.Exit(0)
 				}
