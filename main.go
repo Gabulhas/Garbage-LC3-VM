@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	defer termbox.Close()
 
 	keyBuffer = []rune{}
@@ -53,7 +54,6 @@ func main() {
 		instr := memRead(regs.REG[regs.PC])
 		regs.REG[regs.PC]++
 		op := instr >> 12
-		//fmt.Printf("OP:%s\n", OPS.OperandToString(int(op)))
 
 		logs = append(logs, OPS.OperandToString(int(op)))
 		switch op {
