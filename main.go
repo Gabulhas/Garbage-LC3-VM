@@ -149,7 +149,7 @@ func main() {
 			break
 		case OPS.LEA:
 			r0 := (instr >> 9) & 0x7
-			PCoffset9 := signExtend(instr&0x3F, 6)
+			PCoffset9 := signExtend(instr&0x1ff, 9)
 			regs.REG[r0] = regs.REG[regs.PC] + PCoffset9
 			updateFlags(r0)
 			break
@@ -302,20 +302,22 @@ func memRead(address uint16) uint16 {
 	if address == mr.KBSR {
 		if checkKey() {
 			memory[mr.KBSR] = 1 << 15
-			memory[mr.KBDR] = uint16(keyBuffer[0])
+			memory[mr.KBDR] = uint16(keyBuffer[len(keyBuffer)-1]) & 0x00ff
+			fmt.Printf("GOT %c FROM KB!\n", keyBuffer[len(keyBuffer)-1])
+			keyBuffer = nil
+		} else {
+			memory[mr.KBSR] = 0
 		}
-	} else {
-		memory[mr.KBSR] = 0
 	}
 	return memory[address]
 }
 
 func getChar() uint16 {
 	for len(keyBuffer) == 0 {
-		time.Sleep(time.Microsecond)
+		time.Sleep(time.Second)
 	}
-	keyPress := keyBuffer[0]
-	keyBuffer = keyBuffer[1:]
+	keyPress := keyBuffer[len(keyBuffer)-1]
+	keyBuffer = nil
 	return uint16(keyPress)
 }
 
