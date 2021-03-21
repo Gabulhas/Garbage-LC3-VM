@@ -55,6 +55,7 @@ func main() {
 		regs.REG[regs.PC]++
 		op := instr >> 12
 
+		logs = append(logs, fmt.Sprintf("PC:%d ::", regs.REG[regs.PC]))
 		logs = append(logs, OPS.OperandToString(int(op)))
 		switch op {
 
@@ -102,10 +103,13 @@ func main() {
 
 			PCoffset9 := signExtend(instr&0x1FF, 9)
 			condFlag := (instr >> 9) & 0x7
-			logs = append(logs, fmt.Sprintf(":%d %d", PCoffset9, condFlag))
+			logs = append(logs, fmt.Sprintf(":%d %.8b,%.8b :: %.3b", PCoffset9, condFlag, regs.REG[regs.COND], instr>>9))
 
 			if (condFlag & regs.REG[regs.COND]) == 1 {
+
+				temp := regs.REG[regs.PC]
 				regs.REG[regs.PC] = regs.REG[regs.PC] + PCoffset9
+				logs = append(logs, fmt.Sprintf("PASSED %d->%d", temp, regs.REG[regs.PC]))
 			}
 			break
 		case OPS.JMP:
@@ -168,7 +172,7 @@ func main() {
 			break
 		case OPS.TRAP:
 			trap := instr & 0xFF
-			logs = append(logs, fmt.Sprintf(":%d", trap))
+			logs = append(logs, fmt.Sprintf(":%x", trap))
 			switch trap {
 			case trp.GETC:
 				regs.REG[regs.R0] = getChar()
@@ -218,13 +222,8 @@ func main() {
 
 				break
 			case trp.HALT:
-				fmt.Printf("HALT")
-				getChar()
-				termbox.Flush()
-				termbox.Close()
+				halt()
 				running = false
-				fmt.Println(logs)
-				os.Exit(0)
 				break
 			}
 
@@ -240,16 +239,28 @@ func main() {
 
 		}
 
+		logs = append(logs, "\n")
 	}
 
 }
 
+//Spent a week debugging the whole program, turns out this was wrong :D
+//Thanks https://github.com/mishazawa !
 func signExtend(x uint16, bit_count int) uint16 {
-
-	if (x>>(bit_count-1))&1 == 1 {
-		return x | (0xFFFF << bit_count)
+	// check is 1 in MSB
+	if x>>(bit_count-1)&1 == 1 {
+		x |= 0xffff << bit_count
 	}
-	return 0
+	return x
+}
+
+func halt() {
+	fmt.Printf("HALT")
+	getChar()
+	termbox.Flush()
+	termbox.Close()
+	fmt.Println(logs)
+	os.Exit(0)
 
 }
 
@@ -291,7 +302,7 @@ func memRead(address uint16) uint16 {
 	if address == mr.KBSR {
 		if checkKey() {
 			memory[mr.KBSR] = 1 << 15
-			memory[mr.KBDR] = uint16(keyBuffer[len(keyBuffer)-1])
+			memory[mr.KBDR] = uint16(keyBuffer[0])
 		}
 	} else {
 		memory[mr.KBSR] = 0
@@ -304,7 +315,6 @@ func getChar() uint16 {
 		time.Sleep(time.Microsecond)
 	}
 	keyPress := keyBuffer[0]
-	fmt.Printf("KEY PRESSED: %c", keyPress)
 	keyBuffer = keyBuffer[1:]
 	return uint16(keyPress)
 }
@@ -315,7 +325,7 @@ func listenKeyPresses() {
 			if event := termbox.PollEvent(); event.Type == termbox.EventKey {
 				keyBuffer = append(keyBuffer, event.Ch)
 				if event.Key == termbox.KeyCtrlC {
-					os.Exit(0)
+					halt()
 				}
 			}
 		}
