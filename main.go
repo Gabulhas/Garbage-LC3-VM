@@ -105,7 +105,7 @@ func main() {
 			condFlag := (instr >> 9) & 0x7
 			logs = append(logs, fmt.Sprintf(":%d %.8b,%.8b :: %.3b", PCoffset9, condFlag, regs.REG[regs.COND], instr>>9))
 
-			if (condFlag & regs.REG[regs.COND]) == 1 {
+			if (condFlag & regs.REG[regs.COND]) !=0 {
 
 				temp := regs.REG[regs.PC]
 				regs.REG[regs.PC] = regs.REG[regs.PC] + PCoffset9
@@ -155,12 +155,12 @@ func main() {
 			break
 		case OPS.ST:
 			sr := (instr >> 9) & 0x7
-			PCoffset9 := signExtend(instr&0x3F, 6)
+			PCoffset9 := signExtend(instr&0x1ff, 9)
 			memWrite(regs.REG[regs.PC]+PCoffset9, regs.REG[sr])
 			break
 		case OPS.STI:
 			sr := (instr >> 9) & 0x7
-			PCoffset9 := signExtend(instr&0x3F, 6)
+			PCoffset9 := signExtend(instr&0x1ff, 9)
 			memWrite(memRead(regs.REG[regs.PC]+PCoffset9), regs.REG[sr])
 			break
 		case OPS.STR:
@@ -314,7 +314,7 @@ func memRead(address uint16) uint16 {
 
 func getChar() uint16 {
 	for len(keyBuffer) == 0 {
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond)
 	}
 	keyPress := keyBuffer[len(keyBuffer)-1]
 	keyBuffer = nil
