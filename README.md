@@ -1,6 +1,6 @@
 # LC3-VM in GO
 
-This is my implementation of the Fictional/Learning Virtual Machine [https://en.wikipedia.org/wiki/Little_Computer_3](LC3-VM).
+This is my implementation of the Fictional/Learning Virtual Machine [LC3-VM](https://en.wikipedia.org/wiki/Little_Computer_3).
 I coded this to learn more about Virtual Machines.
 
 Work in Progress
